@@ -39,6 +39,11 @@ HAVING COUNT(DISTINCT f1.fact_fecha) >= 1
 
 
 -- intento de resolucion de parcial de utenianos
+/* realizar una consulta que muestre:
+a)año
+b)el producto con compocicion mas vendido para es año
+c)cantidad de productos q componen al mas vendido
+*/
 select YEAR(f1.fact_fecha) as Año, i1.item_producto,
 (
 select COUNT( c3.comp_componente)
@@ -56,7 +61,8 @@ order by COUNT(*) desc
 ) as codigoDelClienteQueMasLoCompro
 from Factura f1
 inner join Item_Factura i1 on i1.item_tipo=f1.fact_tipo and i1.item_sucursal=f1.fact_sucursal and i1.item_numero=f1.fact_numero
-where i1.item_producto= (select top 1 i2.item_producto 
+group by YEAR(f1.fact_fecha),i1.item_producto
+having i1.item_producto= (select top 1 i2.item_producto 
                         from factura f2 
                         inner join Item_Factura i2 on i2.item_tipo=f2.fact_tipo and i2.item_sucursal=f2.fact_sucursal and i2.item_numero=f2.fact_numero
                         inner join Composicion c2 on i2.item_producto = c2.comp_producto
@@ -64,4 +70,3 @@ where i1.item_producto= (select top 1 i2.item_producto
                         group by i2.item_producto
                         order by SUM(i2.item_cantidad) desc
                         )
-group by YEAR(f1.fact_fecha),i1.item_producto

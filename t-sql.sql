@@ -2,6 +2,48 @@
 --for:se disparan despues de una accion (poniendo for por defecto es after)
 --instead of: se disparan antes de una accion, antes de q ocurra un cambio en las tablas, cancela el resto de las acciones
 
+
+/*Implementar el/los objetos necesarios para que no se pueda realizar una factura si el precio de venta de algún artículo
+ (ítem_precio) es distinto al precio que se encuentra en la tabla Producto (prod_precio)..*/
+
+
+create trigger controlador_stock on Item_factura instead of insert
+as begin
+    declare @item_tipo char(1), @item_sucursal char(4), @item_numero char(8)
+
+    declare miCursor cursor
+    for select i.item_tipo, i.item_sucursal, i.item_numero
+       from inserted i
+
+
+    if not EXISTS (select item_tipo, item_sucursal, item_numero, item_producto, item_cantidad,item_precio
+               from inserted
+               where item_precio <>( select prod_precio
+                                   from dbo.Producto
+                                   where prod_codigo = item_producto)
+               ) 
+    begin
+         insert into Item_Factura
+            select item_tipo, item_sucursal, item_numero, item_producto, item_cantidad,item_precio
+               from inserted
+    end
+    else
+    begin
+         open c1
+         fetch next from c1 into @item_tipo, @item_sucursal, @item_numero
+         while @@FETCH_STATUS = 0
+         begin
+             delete factura
+                where fact_tipo=@item_tipo and fact_sucursal=@item_sucursal and fact_numero=@item_numero
+            fetch next from c1 into @item_tipo, @item_sucursal, @item_numero
+         end
+         close c1
+    end
+
+    deallocate c1
+
+end
+
 /* Sabiendo que el punto de reposicion del stock es la menor cantidad de ese objeto que se debe almacenar en el deposito y
  que el stock maximo es la maxima cantidad de ese producto en ese deposito, cree el/los objetos de base de datos necesarios
  para que dicha regla de negocio se cumpla automaticamente. No se conoce la forma de acceso a los datos ni el procedimiento
@@ -47,7 +89,7 @@ end
 
 
 ------------PUNTO 2---------------
-create trigger restriccionJefes on dbo.Empleado
+create trigger tr_controlar_jefes on dbo.Empleado
 for insert, update
 as begin transaction
     
@@ -58,50 +100,55 @@ as begin transaction
     declare @antiguedad int
     declare @jefe_nuevo_empleado numeric(6,0)
     declare @empleadosTotales int
-    declare @empleadosACargo int
+    declare @cantEmpleadosACargo int
+    declare @gerenteGeneral int
 
     
     set @empleadosTotales = (select count(*) from dbo.Empleado)
+    select @gerenteGeneral =empl_codigo
+     from dbo.Empleado
+     where empl_jefe is null
 
 
     OPEN miCursor
         fetch next from miCursor into @cod_nuevo_empleado, @fecha_ingreso, @jefe_nuevo_empleado
 
         WHILE(@@FETCH_STATUS = 0)
-            begin
+        begin
                 set @antiguedad = YEAR(@fecha_ingreso)
-                set @empleadosACargo = (select Count(*) from dbo.Empleado e where loTieneACargo(@cod_nuevo_empleado, e.empl_codigo) = 1)
+                set @cantEmpleadosACargo = (select Count(*) from dbo.Empleado e where loTieneACargo(@jefe_nuevo_empleado, e.empl_codigo) = 1)
 
-                if (@empleadosACargo > 0)
+                if (@cod_nuevo_empleado <> gerenteGeneral)
                     begin
                         if (@antiguedad < 5)
                             begin 
                                 raiserror('Un jefe no puede tener menos de 5 años de antiguedad',16,1)
                                 rollback transaction
                             end
-                        if (@empleadosACargo * 100 / @empleadosTotales > 50)
+                        if (@cantEmpleadosACargo * 100 / @empleadosTotales > 50)
                             begin
                                 if(@jefe_nuevo_empleado is not null)
                                     begin
                                     raiserror('Un jefe no puede tener mas del 50% del personal a su cargo', 16,1)
                                     rollback transaction
-                                end
                             end
+                            
                     end
-            end
+        end
 
     CLOSE miCursor
     DEALLOCATE miCursor
 commit transaction
+end
 go
 
 
 
-Create function loTieneACargo(@cod_jefe numeric(6,0), @cod_empleado numeric(6,0))
+create function loTieneACargo(@cod_jefe numeric(6,0), @cod_empleado numeric(6,0))
 returns bit(1)
 as begin
     Declare @jefe numeric(6,0)
-    Set @jefe = (Select empl_jefe From dbo.Empleado e where e.empl_codigo= @cod_empleado)
+    set @jefe = (select empl_jefe From dbo.Empleado e where e.empl_codigo= @cod_empleado)
     if (@jefe = @cod_jefe)
         begin
             return 1
@@ -114,7 +161,7 @@ as begin
         begin
             return loTieneACargo(@cod_jefe, @jefe)
         end
-    end
+end
 go
 
 -- recuperatorio 28/06/2016

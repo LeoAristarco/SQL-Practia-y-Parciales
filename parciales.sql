@@ -1,10 +1,21 @@
 -- recuperatorio 28/06/2016
-/* Desarrollar una consulta que retorne para todos los productos (ver codigo)
-La familia sugerida para un producto es la que poseen la mayoria de los productos cuyo detalle coinciden
-en los primeros 5 caracteres.
+/* 
+En virtud de una recategorizacion de productos referida a la familia de los mismos se solicita que desarrolle una consulta sql
+que retorne para todos los productos: 
+1- Codigo de producto
+2- Detalle del producto 
+3- Codigo de la familia del producto 
+4- Detalle de la familia actual del producto
+5- Codigo de la familia sugerido para el producto 
+6- Detalla de la familia sugerido para el producto 
+ 
+La familia sugerida para un producto es la que poseen la mayoria de los productos cuyo detalle coinciden en los primeros 5 caracteres.
 En caso que 2 o mas familias pudieran ser sugeridas se debera seleccionar la de menor codigo.
-Solo se debera mostrar los productos para los cuales la familia actual sea diferente a la sugerida.
-El resultado debe ordenarse por detalle de producto de manera ascendente*/
+Solo se deben mostrar los productos para los cuales la familia actual sea diferente a la sugerida
+Los resultados deben ser ordenados por detalle de producto de manera ascendente 
+
+
+*/
 
 SELECT P.prod_codigo AS codProducto, P.prod_detalle AS detalleProducto, 
     F.fami_id AS codFamiliaActualProducto, F.fami_detalle AS detalleFamiliaActualProducto,
@@ -22,11 +33,18 @@ AND P.prod_familia != F2.fami_id
 ORDER BY P.prod_detalle ASC
 
 
-/* Escriba una consulta en sql que retorne para todos los años, en los cuales se haya hecho al menos
-una factura, la cantidad de clientes a los que se les facturo de manera incorrecta al menos una factura y
+/*
+. Escriba una consulta sql que retorne para todos los años, en los cuales se haya hecho al menos una factura,
+la cantidad de clientes a los que se les facturo de manera incorrecta al menos una factura y 
 que cantidad de facturas se realizaron de manera incorrecta.
-Se considera que una factura es incorrecta cuando la diferencia entre el total de la factura menos el total impuesto
-tiene una diferencia mayor a $1 respecto a la sumatoria de los costos de cada uno de los items de dicha factura
+Se considera que una factura es incorrecta cuando la diferencia
+entre el total de la factura menos el total de impuesto tiene una diferencia mayor
+a $ 1 respecto a la sumatoria de los costos de cada uno de los items de dicha factura
+. Las columnas que se deben mostrar son: 
+1- Año
+2- Clientes a los que se les facturo mal en ese año
+3- Facturas mal realizadas en ese año 
+
 */
 
 select YEAR(f1.fact_fecha) as Año, COUNT(DISTINCT f1.fact_cliente), COUNT(*)

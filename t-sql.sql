@@ -11,8 +11,11 @@
 
 create trigger controlador_stock on STOCK instead of update
 as begin
-    declare @producto1 char(8), @deposito1 char(2), @cantidad1 decimal(12,2), @minimo1 decimal(12,2), @maximo1 decimal(12,2)
-    declare c1 cursor for select stoc_producto, stoc_deposito, stoc_cantidad, stoc_punto_reposicion, stoc_stock_maximo from inserted
+    declare @producto1 char(8), @deposito1 char(2), @cantidad1 decimal(12,2),
+            @minimo1 decimal(12,2), @maximo1 decimal(12,2)
+
+    declare c1 cursor for select stoc_producto, stoc_deposito, stoc_cantidad, stoc_punto_reposicion, stoc_stock_maximo
+                          from inserted
 
     open c1
     fetch next from c1 into @producto1, @deposito1, @cantidad1, @minimo1, @maximo1
@@ -44,21 +47,21 @@ end
 
 
 ------------PUNTO 2---------------
-Create trigger restriccionJefes on dbo.Empleado
+create trigger restriccionJefes on dbo.Empleado
 for insert, update
 as begin transaction
     
-    Declare miCursor cursor for (Select empl_codigo, empl_ingreso, empl_jefe From inserted)
+    declare miCursor cursor for (select empl_codigo, empl_ingreso, empl_jefe from inserted)
     
-    Declare @cod_nuevo_empleado numeric(6,0)
-    Declare @fecha_ingreso smalldatetime
-    Declare @antiguedad int
-    Declare @jefe_nuevo_empleado numeric(6,0)
-    Declare @empleadosTotales int
-    Declare @empleadosACargo int
+    declare @cod_nuevo_empleado numeric(6,0)
+    declare @fecha_ingreso smalldatetime
+    declare @antiguedad int
+    declare @jefe_nuevo_empleado numeric(6,0)
+    declare @empleadosTotales int
+    declare @empleadosACargo int
 
     
-    Set @empleadosTotales = (Select Count(*) From dbo.Empleado)
+    set @empleadosTotales = (select count(*) from dbo.Empleado)
 
 
     OPEN miCursor
@@ -66,8 +69,8 @@ as begin transaction
 
         WHILE(@@FETCH_STATUS = 0)
             begin
-                Set @antiguedad = YEAR(@fecha_ingreso)
-                Set @empleadosACargo = (Select Count(*) From dbo.Empleado e where loTieneACargo(@cod_nuevo_empleado, e.empl_codigo) = 1)
+                set @antiguedad = YEAR(@fecha_ingreso)
+                set @empleadosACargo = (select Count(*) from dbo.Empleado e where loTieneACargo(@cod_nuevo_empleado, e.empl_codigo) = 1)
 
                 if (@empleadosACargo > 0)
                     begin
@@ -80,7 +83,7 @@ as begin transaction
                             begin
                                 if(@jefe_nuevo_empleado is not null)
                                     begin
-                                    raiserror('Un jefe no puede tener', 16,1)
+                                    raiserror('Un jefe no puede tener mas del 50% del personal a su cargo', 16,1)
                                     rollback transaction
                                 end
                             end

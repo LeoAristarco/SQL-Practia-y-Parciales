@@ -216,3 +216,23 @@ from Factura f1
      where item_tipo=f1.fact_tipo and item_sucursal=f1.fact_sucursal and item_numero=f1.fact_numero) > 1 )
 group by YEAR(f1.fact_fecha)
 HAVING COUNT(DISTINCT f1.fact_fecha) >= 1
+
+
+/*
+
+*/
+create trigger tg_jefes_de_no_mas_de_10_empleados
+on Empleado
+after insert, delete
+as
+begin
+
+	if exists(
+		select 1 
+		from Empleado as E
+		group by 
+			E.empl_jefe
+		having 
+			COUNT(*) >= 10 or COUNT(*) < 1)
+	rollback
+end

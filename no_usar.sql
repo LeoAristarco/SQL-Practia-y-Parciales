@@ -28,15 +28,11 @@ drop procedure BEMVINDO.sp_insertar_nuevo_dia_agenda
 
 go
 
-if EXISTS (SELECT * FROM sysobjects  WHERE name='sp_actualizar_fechas_agenda') 
-drop procedure BEMVINDO.sp_actualizar_fechas_agenda
+if EXISTS (SELECT * FROM sysobjects  WHERE name='sp_insertar_especialidad_por_dia_agenda') 
+drop procedure BEMVINDO.sp_insertar_especialidad_por_dia_agenda
 
 go
 
-if EXISTS (SELECT * FROM sysobjects  WHERE name='sp_eliminar_dia_agenda_por_id') 
-drop procedure BEMVINDO.sp_eliminar_dia_agenda_por_id
-
-go
 ---ABM AFILIADO
 -------------------------------------------------------------------------------------------------------
 if EXISTS (SELECT * FROM sysobjects  WHERE name='st_insertar_afiliado') 
@@ -158,31 +154,27 @@ drop procedure BEMVINDO.st_registrar_consulta
 
 go
 
-if EXISTS (SELECT * FROM sysobjects  WHERE name='st_actualizar_consulta') 
-drop procedure BEMVINDO.st_actualizar_consulta
+if EXISTS (SELECT * FROM sysobjects  WHERE name='st_obtener_turnos_a_diagnosticar') 
+drop procedure BEMVINDO.st_obtener_turnos_a_diagnosticar
 
 go
 
 
-if EXISTS (SELECT * FROM sysobjects  WHERE name='st_obtener_fecha_minima_turno') 
-drop procedure BEMVINDO.st_obtener_fecha_minima_turno
+if EXISTS (SELECT * FROM sysobjects  WHERE name='st_obtener_consultas') 
+drop procedure BEMVINDO.st_obtener_consultas
 
 go
 
-if EXISTS (SELECT * FROM sysobjects  WHERE name='st_obtener_fecha_maxima_turno') 
-drop procedure BEMVINDO.st_obtener_fecha_maxima_turno
+if EXISTS (SELECT * FROM sysobjects  WHERE name='st_obtener_fecha_minima_consulta')
+drop procedure BEMVINDO.st_obtener_fecha_minima_consulta
 
 go
 
-if EXISTS (SELECT * FROM sysobjects  WHERE name='st_obtener_consulta') 
-drop procedure BEMVINDO.st_obtener_consulta
+if EXISTS (SELECT * FROM sysobjects  WHERE name='st_obtener_fecha_maxima_consulta')
+drop procedure BEMVINDO.st_obtener_fecha_maxima_consulta
 
 go
 
-if EXISTS (SELECT * FROM sysobjects  WHERE name='st_cantidad_turnos') 
-drop procedure BEMVINDO.st_cantidad_turnos
-
-go
 
 --CANCELAR ATENCION MEDICA POR PARTE DEL AFILIADO
 -------------------------------------------------------------------------------------------------------
@@ -244,6 +236,11 @@ go
 /********************************************************************************************************************************/
 /*VERIFICO EXISTENCIA DE TABLAS ANTSES DE CREARLAS*/
 /********************************************************************************************************************************/
+
+if EXISTS (SELECT * FROM sysobjects  WHERE name='ESPECIALIDAD_POR_DIA_AGENDA') 
+drop table BEMVINDO.ESPECIALIDAD_POR_DIA_AGENDA 
+
+go
 
 if EXISTS (SELECT * FROM sysobjects  WHERE name='BONO') 
 drop table BEMVINDO.BONO
@@ -377,7 +374,6 @@ if EXISTS (SELECT * FROM sysobjects WHERE name='tg_hashear_pass_update')
 drop trigger BEMVINDO.tg_hashear_pass_update
 
 go
-
 
 /********************************************************************************************************************************/
 /*CREACION DE ESQUEMA*/
@@ -594,30 +590,39 @@ create table BEMVINDO.DIA_AGENDA
 (
     id_dia_agenda       numeric(10,0) identity(1,1),
     agenda      numeric(10,0),
-    especialidad    numeric(10,0),
     dia     nvarchar(10) check (dia in('LUNES','MARTES', 'MIÉRCOLES','JUEVES', 'VIERNES', 'SÁBADO', 'DOMINGO')),
     horario_inicial     time,
     horario_final       time,
     
 
     PRIMARY KEY (id_dia_agenda),
-    FOREIGN KEY (agenda)   references BEMVINDO.AGENDA(id_agenda),
-    FOREIGN KEY (especialidad)   references BEMVINDO.ESPECIALIDAD(id_especialidad)
+    FOREIGN KEY (agenda)   references BEMVINDO.AGENDA(id_agenda)
 )
 
 go
 
-  create table BEMVINDO.CANCELACION_DIA
-  (
-      id_cancelacion_dia      numeric(10,0) identity(1,1),
-      agenda                  numeric(10,0) ,
-      cancelacion_desde       date,
-      cancelacion_hasta       date,
-  
-      
-      PRIMARY KEY (id_cancelacion_dia),
-      FOREIGN KEY (agenda)             references BEMVINDO.AGENDA(id_agenda)
-  )
+create table BEMVINDO.ESPECIALIDAD_POR_DIA_AGENDA
+(
+	id_dia_Agenda numeric(10,0),
+	id_especialidad numeric(10,0)
+
+
+	FOREIGN KEY (id_dia_Agenda) references BEMVINDO.DIA_AGENDA(id_dia_agenda),
+	FOREIGN KEY (id_especialidad) references BEMVINDO.ESPECIALIDAD(id_especialidad),
+)
+go
+
+create table BEMVINDO.CANCELACION_DIA
+(
+    id_cancelacion_dia      numeric(10,0) identity(1,1),
+    agenda                  numeric(10,0) ,
+    cancelacion_desde       date,
+    cancelacion_hasta       date,
+
+
+    PRIMARY KEY (id_cancelacion_dia),
+    FOREIGN KEY (agenda)             references BEMVINDO.AGENDA(id_agenda)
+)
   
 go
 
@@ -820,17 +825,17 @@ values
     (6,3),
     (7,3),
     (8,1),
-  (8,3),
+	(8,3),
     (9,2),
     (9,3),
     (10,2),
-  (10,3),
+	(10,3),
     (11,3),
     (12,1),
-  (12,3),
+	(12,3),
     (13,2),
     (13,1),
-  (13,3),
+	(13,3),
     (14,3),
     (15,3)
 
@@ -1085,7 +1090,7 @@ insert into BEMVINDO.COMPRA
         on U.documento = M.Paciente_Dni
     where 
         M.Turno_Numero is null
-  group by 
+	group by 
     U.id_usuario, M.Compra_Bono_Fecha
 go
 
@@ -1104,7 +1109,7 @@ insert into BEMVINDO.BONO
         M.Bono_Consulta_Numero
     from gd_esquema.Maestra as M
     inner join BEMVINDO.PLAN_MEDICO as P on M.Plan_Med_Codigo = P.plan_medico_codigo
-  inner join BEMVINDO.USUARIO as U on U.documento = M.Paciente_Dni
+	inner join BEMVINDO.USUARIO as U on U.documento = M.Paciente_Dni
     inner join BEMVINDO.COMPRA as C on U.id_usuario = C.comprador
     inner join BEMVINDO.TURNO as T on M.Turno_Numero = T.turno_numero
     where 
@@ -1137,15 +1142,16 @@ go
 -------------------------------------------------------------------------------------------------------
 insert into BEMVINDO.AGENDA
   select 
-    U.id_usuario as profesional,
-    null,--MIN(M.Turno_Fecha) as fecha_inicial,
-    null--DATEADD(year,1,MAX(M.Turno_Fecha)) as fecha_final
-  from gd_esquema.Maestra as M
-  inner join BEMVINDO.USUARIO as U on 
-    U.documento = M.Medico_Dni
-  group by 
-    U.id_usuario
-
+		U.id_usuario as profesional,
+		MIN(M.Turno_Fecha) as fecha_inicial,
+		MAX(M.Turno_Fecha) as fecha_final
+	from gd_esquema.Maestra as M
+	inner join BEMVINDO.USUARIO as U on 
+		U.documento = M.Medico_Dni
+	where 
+		M.Turno_Fecha is not null
+	group by 
+		U.id_usuario		
 go
 
 --DIA AGENDA
@@ -1153,21 +1159,7 @@ go
 insert into BEMVINDO.DIA_AGENDA
   select 
     A.id_agenda,
-    case
-      when 1 = 
-        (select COUNT(distinct M2.Especialidad_Codigo)
-        from gd_esquema.Maestra as M2
-        group by UPPER(DATENAME(weekday, M2.Turno_Fecha)), M2.Medico_Dni
-        having UPPER(DATENAME(weekday, M2.Turno_Fecha)) = UPPER(DATENAME(weekday, M.Turno_Fecha)) and M2.Medico_Dni = M.Medico_Dni)
-        then        
-          (select E2.id_especialidad
-          from gd_esquema.Maestra as M2
-          inner join BEMVINDO.ESPECIALIDAD as E2 on E2.especialidad_codigo = M2.Especialidad_Codigo
-          group by UPPER(DATENAME(weekday, M2.Turno_Fecha)), M2.Medico_Dni, E2.id_especialidad
-          having  UPPER(DATENAME(weekday, M2.Turno_Fecha)) = UPPER(DATENAME(weekday, M.Turno_Fecha)) and M2.Medico_Dni = M.Medico_Dni)
-      else null
-    end as especialidad,
-    UPPER(DATENAME(weekday, M.Turno_Fecha)) as nombre_dia,
+    UPPER(DATENAME(weekday, M.Turno_Fecha)) as dia,
     CONVERT(char(8), MIN(M.Turno_Fecha), 108) as hora_inicial,
     CONVERT(char(8), DATEADD(minute, 30, MAX(M.Turno_Fecha)), 108) as hora_final
   from gd_esquema.Maestra as M
@@ -1175,10 +1167,30 @@ insert into BEMVINDO.DIA_AGENDA
     U.documento = M.Medico_Dni
   inner join BEMVINDO.AGENDA as A on
     A.profesional = U.id_usuario
-  inner join BEMVINDO.ESPECIALIDAD as E on
-    E.especialidad_codigo = M.Especialidad_Codigo
   group by 
     A.id_agenda, UPPER(DATENAME(weekday, M.Turno_Fecha)), M.Medico_Dni
+
+go
+
+--ESPECIALIDAD POR DIA AGENDA
+-------------------------------------------------------------------------------------------------------
+insert into BEMVINDO.ESPECIALIDAD_POR_DIA_AGENDA
+	select
+		D.id_dia_agenda,
+		E.id_especialidad
+	from gd_esquema.Maestra as M
+	inner join BEMVINDO.ESPECIALIDAD as E on
+		E.especialidad_codigo = M.Especialidad_Codigo
+	inner join BEMVINDO.USUARIO as U on
+		U.documento = M.Medico_Dni
+	inner join BEMVINDO.AGENDA as A	on
+		A.profesional = U.id_usuario
+	inner join BEMVINDO.DIA_AGENDA as D on
+		D.agenda = A.id_agenda
+	group by 
+		U.id_usuario, D.id_dia_agenda, D.dia, D.horario_inicial, D.horario_final, UPPER(DATENAME(weekday, M.Turno_Fecha)), E.id_especialidad
+	having 
+		D.dia = UPPER(DATENAME(weekday, M.Turno_Fecha))
 
 go
 
@@ -1536,18 +1548,20 @@ as begin
         A.id_agenda,
         A.fecha_inicial,
         A.fecha_final,
-        E.id_especialidad as id_especialidad,
-        E.descripcion as especialidad,
-    D.id_dia_agenda,
+		D.id_dia_agenda,
         D.dia,
         D.horario_inicial,
-        D.horario_final
+        D.horario_final,
+		ED.id_especialidad,
+		E.descripcion
     from BEMVINDO.AGENDA as A
-    left join BEMVINDO.DIA_AGENDA as D on A.id_agenda = D.agenda
-    left join BEMVINDO.ESPECIALIDAD as E on D.especialidad = E.id_especialidad
+    inner join BEMVINDO.DIA_AGENDA as D on A.id_agenda = D.agenda 
+	inner join BEMVINDO.ESPECIALIDAD_POR_DIA_AGENDA as ED on ED.id_dia_Agenda = D.id_dia_agenda
+    inner join BEMVINDO.ESPECIALIDAD as E on E.id_especialidad = ED.id_especialidad
     where 
-    D.dia != 'DOMINGO' and
-        A.profesional = @id_profesional
+		D.dia != 'DOMINGO' and
+        A.profesional = @id_profesional and
+		A.fecha_final = (select top 1 a2.fecha_final from BEMVINDO.AGENDA as a2 where a2.profesional = A.profesional order by a2.fecha_final desc)
 end
 
 go
@@ -1566,27 +1580,6 @@ end
 
 go
 
-create procedure BEMVINDO.sp_eliminar_dia_agenda_por_id
-  @id_dia_agenda numeric(10,0)
-as begin
-  delete from BEMVINDO.DIA_AGENDA
-  where id_dia_agenda = @id_dia_agenda
-end
-
-go
-
-create procedure BEMVINDO.sp_actualizar_fechas_agenda
-  @id_agenda numeric(10,0),
-  @fecha_inicial date,
-  @fecha_final date
-as begin
-  update BEMVINDO.AGENDA
-  set fecha_inicial = @fecha_inicial, fecha_final = @fecha_final
-  where id_agenda = @id_agenda
-end
-
-go
-
 create procedure BEMVINDO.sp_insertar_nueva_agenda
     @id_profesional numeric(10,0),
     @fecha_inicial date,
@@ -1595,22 +1588,31 @@ as begin
     insert into BEMVINDO.AGENDA
     values (@id_profesional, @fecha_inicial, @fecha_final)
 
-    select id_agenda
-    from BEMVINDO.AGENDA
-    where profesional = @id_profesional
+	select IDENT_CURRENT('BEMVINDO.AGENDA') as id_agenda
 end
 
 go
 
 create procedure BEMVINDO.sp_insertar_nuevo_dia_agenda
     @id_agenda numeric(10,0),
-    @id_especialidad numeric(10,0),
     @dia nvarchar(10),
     @hora_inicial time,
     @hora_final time
 as begin
     insert into BEMVINDO.DIA_AGENDA
-    values (@id_agenda, @id_especialidad, @dia, @hora_inicial, @hora_final)
+    values (@id_agenda, @dia, @hora_inicial, @hora_final)
+
+	select IDENT_CURRENT('BEMVINDO.DIA_AGENDA') as id_dia_agenda
+end
+
+go
+
+create procedure BEMVINDO.sp_insertar_especialidad_por_dia_agenda
+    @id_dia_agenda numeric(10,0),
+    @especialidad nvarchar(10)
+as begin
+    insert into BEMVINDO.ESPECIALIDAD_POR_DIA_AGENDA
+    values (@id_dia_agenda, @especialidad)
 end
 
 go
@@ -1873,80 +1875,78 @@ go
 -----------------------------------------------------------------------------------------------------------------------------------------
 
 create procedure BEMVINDO.st_registrar_consulta
-@id_turno               numeric(10,0),
+@turno               numeric(10,0),
 @sintoma                nvarchar(255),
 @enfermedad             nvarchar(255),
 @fecha_diagnostico      datetime
 
-AS
+as
 begin
 
     insert into BEMVINDO.CONSULTA(turno,sintoma,enfermedad,fecha_diagnostico)
-     values (@id_turno,@sintoma,@enfermedad,@fecha_diagnostico)
+     values (@turno,@sintoma,@enfermedad,@fecha_diagnostico)
 
 end
 
 go
 
-create procedure BEMVINDO.st_actualizar_consulta
-@id_turno               numeric(10,0),
-@sintoma                nvarchar(255),
-@enfermedad             nvarchar(255),
-@fecha_diagnostico      datetime
+create procedure BEMVINDO.st_obtener_turnos_a_diagnosticar
+@profesional			numeric(10,0),
+@fecha					datetime
 
-AS
+as
 begin
-
-    update BEMVINDO.CONSULTA set sintoma = @sintoma, enfermedad = @enfermedad,
-    fecha_diagnostico = @fecha_diagnostico
-    where turno = @id_turno
+	select * from BEMVINDO.TURNO where profesional = @profesional 
+		and fecha_llegada is not null 
+		and CONVERT(date, fecha_turno) = CONVERT(date, @fecha)
+		and id_turno not in (select turno from BEMVINDO.CONSULTA)
+		and activo = 1
+	order by fecha_turno
 end
 
 go
 
-CREATE PROCEDURE BEMVINDO.st_obtener_fecha_minima_turno
+create procedure BEMVINDO.st_obtener_consultas
+@profesional			numeric(10,0),
+@fecha					datetime
+
+as
+begin
+	select * from BEMVINDO.CONSULTA c
+	inner join turno t on c.turno = t.id_turno 
+	where profesional = @profesional 
+	and CONVERT(date, fecha_turno) = CONVERT(date, @fecha)
+	order by fecha_turno
+end
+
+go
+
+
+create procedure BEMVINDO.st_obtener_fecha_minima_consulta
 @profesional            numeric(10,0)
 
-AS
+as
 begin
-    select MIN(CONVERT(date, fecha_turno)) as 'fechaMinima' from BEMVINDO.TURNO 
-        where profesional = @profesional
+    select MIN(CONVERT(date, fecha_turno)) as 'fechaMinima' from BEMVINDO.TURNO t
+	inner join BEMVINDO.CONSULTA c on c.turno = t.id_turno 
+    where profesional = @profesional
 end
 
 go
 
-CREATE PROCEDURE BEMVINDO.st_obtener_fecha_maxima_turno
+create procedure BEMVINDO.st_obtener_fecha_maxima_consulta
 @profesional            numeric(10,0)
 
-AS
+as
 begin
-    select MAX(CONVERT(date, fecha_turno)) as 'fechaMaxima' from BEMVINDO.TURNO 
-        where profesional = @profesional
+    select MAX(CONVERT(date, fecha_turno)) as 'fechaMaxima' from BEMVINDO.TURNO t
+	inner join BEMVINDO.CONSULTA c on c.turno = t.id_turno 
+    where profesional = @profesional
 end
 
 go
 
-CREATE PROCEDURE BEMVINDO.st_obtener_consulta
-@turno                  numeric(10,0)
 
-AS
-begin
-    select * from BEMVINDO.CONSULTA
-        where turno = @turno
-end
-
-go
-
-CREATE PROCEDURE BEMVINDO.st_cantidad_turnos
-@profesional            numeric(10,0)
-
-AS
-begin
-    SELECT COUNT(*) as 'cantidad' FROM BEMVINDO.TURNO
-        where profesional = @profesional
-end
-
-go
 
 -----------------------------------------------------------------------------------------------------------------------------------------
 ---------------------------------------RESULTADOS PARA ATENCION MEDICA----------------------------------------------------------------------------------------------

@@ -227,12 +227,74 @@ after insert, delete
 as
 begin
 
-	if exists(
-		select 1 
-		from Empleado as E
-		group by 
-			E.empl_jefe
-		having 
-			COUNT(*) >= 10 or COUNT(*) < 1)
-	rollback
+    if exists(
+        select 1 
+        from Empleado as E
+        group by 
+            E.empl_jefe
+        having 
+            COUNT(*) >= 10 or COUNT(*) < 1)
+    rollback
+end
+
+--2
+
+/*
+  12/11/16
+1º parcial lacquaniti
+Implementar el/los objetos necesarios para que cada vez que se decida incrementar la comision
+de un empleado no se permita incrementar mas de un 5 % la comision de aquellos empleados
+responsables de menos de 4 depositos
+
+correccion lacquaniti
+PL: No contempla la posibilidad que cambien otros atributos del cliente, por ejemplo, el nombre.
+ Al hacer un trigger instead of, si no modifica los datos en el codigo no se hace.
+
+*/
+
+
+
+
+create trigger update_cliente on dbo.Empleado instead of update
+as begin
+
+    declare miCursor cursor for (select empl_codigo, empl_comision from inserted)
+
+    declare miCursor2 cursor for (select empl_comision from deleted)
+    
+    declare @comisionNueva decimal(12,2)
+    declare @comisionVieja decimal(12,2)
+    declare @empl_codigo numeric(6)
+    declare @cantDepocitosAcargo numeric(6)
+
+
+    OPEN miCursor
+    OPEN miCursor2
+        fetch next from miCursor into @empl_codigo, @comisionNueva
+        fetch next from miCursor2 into @comisionVieja
+
+        WHILE(@@FETCH_STATUS = 0)
+        begin
+                set @cantDepocitosAcargo = (select Count(*) from dbo.DEPOSITO  where depo_encargado=@empl_codigo)
+
+                if ( ( (@comisionNueva-@comisionVieja) * 100 / @comisionVieja) > 5)
+                    begin
+                        if (@cantDepocitosAcargo > 4)
+                            begin
+                                update Empleado  SET empl_comision = @comisionNueva
+                                where empl_codigo=@empl_codigo
+
+                            end
+                            
+                    end
+                fetch next from miCursor into @empl_codigo, @comisionNueva
+                fetch next from miCursor2 into @comisionVieja    
+        end
+
+    CLOSE miCursor
+    DEALLOCATE miCursor
+    CLOSE miCursor2
+    DEALLOCATE miCursor2
+
+
 end

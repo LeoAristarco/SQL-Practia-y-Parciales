@@ -219,10 +219,6 @@ PL: No contempla la posibilidad que cambien otros atributos del cliente, por eje
  Al hacer un trigger instead of, si no modifica los datos en el codigo no se hace.
 
 */
-
-
-
-
 create trigger update_cliente on dbo.Empleado instead of update
 as begin
 
@@ -269,13 +265,58 @@ end
 
 
 /*
-en teoria este ejercicio esta bien, el enunciado dice q "cada vez que se decida incrementar la comision
-de un empleado no se permita incrementar mas de un 5 %", por eso no contemple la posibilidad q cambien otros atributos
-osea, imagine que dichos cambios se harian de este modo    [update Empleado  SET empl_comision = 4 where empl_codigo=3].
-
-se que  Al hacer un trigger instead of, si no modifica los datos en el codigo no se hace. Por eso es q hago 
-                                [update Empleado  SET empl_comision = @comisionNueva
-                                where empl_codigo=@empl_codigo] dentro del codigo del trigger
-en definitiva cumplo con lo que dice el enunciado
-
+correccion lacquaniti
+PL: No contempla la posibilidad que cambien otros atributos del cliente, por ejemplo, el nombre.
+ Al hacer un trigger instead of, si no modifica los datos en el codigo no se hace.
 */
+
+--corregio el error
+
+create trigger tr_controlar_aumento_en_comicion on dbo.Empleado
+for insert, update
+as begin
+
+    begin transaction
+
+
+    declare miCursor cursor for (select empl_codigo, empl_comision from inserted)
+
+    declare miCursor2 cursor for (select empl_comision from deleted)
+    
+    declare @comisionNueva decimal(12,2)
+    declare @comisionVieja decimal(12,2)
+    declare @empl_codigo numeric(6)
+    declare @cantDepocitosAcargo numeric(6)
+
+
+    OPEN miCursor
+    OPEN miCursor2
+        fetch next from miCursor into @empl_codigo, @comisionNueva
+        fetch next from miCursor2 into @comisionVieja
+
+        WHILE(@@FETCH_STATUS = 0)
+        begin
+                set @cantDepocitosAcargo = (select Count(*) from dbo.DEPOSITO  where depo_encargado=@empl_codigo)
+
+                if ( (@cantDepocitosAcargo < 4))
+                    begin
+                          if ( ( (@comisionNueva-@comisionVieja) * 100 / @comisionVieja) < 5)
+                            begin
+                                 rollback transaction
+                            end
+                    end
+
+                fetch next from miCursor into @empl_codigo, @comisionNueva
+                fetch next from miCursor2 into @comisionVieja    
+        end
+
+    CLOSE miCursor
+    DEALLOCATE miCursor
+    CLOSE miCursor2
+    DEALLOCATE miCursor2
+    
+
+    commit transaction
+end
+
+

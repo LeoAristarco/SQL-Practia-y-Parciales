@@ -51,8 +51,7 @@ end
  para que dicha regla de negocio se cumpla automaticamente. No se conoce la forma de acceso a los datos ni el procedimiento
   por el cual se incrementa o descuenta stock*/
 
-
-
+--echo por reinosa
 create trigger controlador_stock on STOCK instead of update
 as begin
     declare @producto1 char(8), @deposito1 char(2), @cantidad1 decimal(12,2),
@@ -93,7 +92,9 @@ end
 create trigger tr_controlar_jefes on dbo.Empleado
 for insert, update
 as begin
-    begin transaction
+
+BEGIN TRANSACTION  
+BEGIN TRY
     
     declare miCursor cursor for (select empl_jefe from inserted)
     
@@ -126,8 +127,7 @@ as begin
 
                         if (@antiguedad < 5)
                             begin 
-                                raiserror('Un jefe no puede tener menos de 5 años de antiguedad',16,1)
-                                rollback transaction
+                                raiserror('ERROR:Un jefe no puede tener menos de 5 años de antiguedad',16,1)
                             end
 
 
@@ -139,11 +139,7 @@ as begin
 
                         if ( (@cantEmpleadosACargo * 100 / @empleadosTotales) > 50)
                             begin
-                                if(@jefe_del_nuevo_empleado is not null)
-                                    begin
-                                    raiserror('Un jefe no puede tener mas del 50% del personal a su cargo', 16,1)
-                                    rollback transaction
-                                    end
+                                 raiserror('ERROR:Un jefe no puede tener mas del 50% del personal a su cargo', 16,1)
                             end
                             
                     end
@@ -153,11 +149,18 @@ as begin
 
     CLOSE miCursor
     DEALLOCATE miCursor
-commit transaction
+
+COMMIT TRAN  
+END TRY
+
+BEGIN CATCH  
+ROLLBACK TRAN     
+print(ERROR_MESSAGE()) 
+END CATCH 
+
 end
 
 
-go
 
 
 go
@@ -219,7 +222,7 @@ PL: No contempla la posibilidad que cambien otros atributos del cliente, por eje
  Al hacer un trigger instead of, si no modifica los datos en el codigo no se hace.
 
 */
-create trigger update_cliente on dbo.Empleado instead of update
+create trigger tr_controlar_aumento_en_comicion on dbo.Empleado instead of update
 as begin
 
     declare miCursor cursor for (select empl_codigo, empl_comision from inserted)

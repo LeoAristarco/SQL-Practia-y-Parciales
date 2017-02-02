@@ -274,7 +274,6 @@ PL: No contempla la posibilidad que cambien otros atributos del cliente, por eje
 */
 
 --corregio el error
-
 create trigger tr_controlar_aumento_en_comicion on dbo.Empleado
 for insert, update
 as begin
@@ -323,3 +322,72 @@ as begin
 end
 
 
+/*
+1º recuperatorio de lacquaniti
+Implemente el/los objetos necesarios para obtener en una nueva tabla (FacturacionPorMes) los datos
+correspondientes a los montos totales de ventas,actualizados a cada momento.
+La tabla debe contener: mes,año,cantidad de facturas emitidas, monto total de ventas (incluir los impuetos) y
+cliente q mas compro para ese mes y año.
+*/
+
+
+
+/*
+La tabla a completar es la siguiente:
+1)Orden del ranking
+2)codigo del cliente
+3)nombre del cliente
+4)cantidad de facturas compradas en el año corriente
+5)precio promedio de la factura
+6)"si" o "no" en funcion de que haya comprado productos con composicion o no
+nombre del producto mas comprado por este cliente en el año corriente
+
+Se debe considerar que los datos deben insertarse en orden de mayor a menor,o sea,
+el cliente que mas compro en plata primero y el que menos compro en plata ultimo,
+numerando en la columna posicion el orden que ocupa dentro del ranking.
+*/
+
+ CREATE FUNCTION comprobarCombo(@codCliente as char(6))
+returns varchar(3)
+as
+BEGIN
+DECLARE @rta as varchar(3), @cant as integer
+ select @cant= count(*)     
+    from factura f
+    inner join Item_Factura i on f.fact_tipo=i.item_tipo and f.fact_sucursal=i.item_sucursal and f.fact_numero=i.item_numero
+    inner join composicion c on i.item_producto = c.comp_producto
+    where f.fact_cliente = @codCliente
+if (@cant>0)
+    SET @rta='SI'
+ELSE
+    SET @rta='NO'
+return @rta
+END
+
+
+CREATE procedure generarRanking 
+as
+BEGIN
+insert into raking
+select  ROW_NUMBER() over (order by SUM(f1.fact_total) desc) as posicion,
+c1.clie_codigo as cod_clie, 
+SUM(f1.fact_total) as factTotal,
+c1.clie_razon_social as nom_clie,
+COUNT(f1.fact_numero) as cantidad,
+SUM(f1.fact_total)/COUNT( f1.fact_numero) as pre_pro,
+dbo.comprobarCombo (c1.clie_codigo) as poseeCombo,
+(
+select top 1 p2.prod_detalle
+        from Factura f2
+        inner join Item_Factura i2 on f2.fact_tipo=i2.item_tipo and f2.fact_sucursal=i2.item_sucursal and f2.fact_numero=i2.item_numero
+        inner join Producto p2 on p2.prod_codigo = i2.item_producto
+        where f2.fact_cliente=c1.clie_codigo
+        group by p2.prod_detalle
+        order by SUM(i2.item_cantidad) desc
+        ) as nom_producto
+from Cliente c1
+inner join Factura f1 on c1.clie_codigo=f1.fact_cliente
+group by c1.clie_codigo, c1.clie_razon_social
+
+
+END

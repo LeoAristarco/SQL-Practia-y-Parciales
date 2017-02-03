@@ -9,7 +9,7 @@
  (ítem_precio) es distinto al precio que se encuentra en la tabla Producto (prod_precio)..*/
 
 
-create trigger controlador_stock on Item_factura instead of insert
+create trigger controlador_precio_de_venta on Item_factura instead of insert
 as begin
     declare @item_tipo char(1), @item_sucursal char(4), @item_numero char(8)
 
@@ -31,18 +31,18 @@ as begin
     end
     else
     begin
-         open c1
-         fetch next from c1 into @item_tipo, @item_sucursal, @item_numero
+         open miCursor
+         fetch next from miCursor into @item_tipo, @item_sucursal, @item_numero
          while @@FETCH_STATUS = 0
          begin
              delete factura
                 where fact_tipo=@item_tipo and fact_sucursal=@item_sucursal and fact_numero=@item_numero
-            fetch next from c1 into @item_tipo, @item_sucursal, @item_numero
+            fetch next from miCursor into @item_tipo, @item_sucursal, @item_numero
          end
-         close c1
     end
 
-    deallocate c1
+    deallocate miCursor
+    close miCursor
 
 end
 
@@ -57,11 +57,11 @@ as begin
     declare @producto1 char(8), @deposito1 char(2), @cantidad1 decimal(12,2),
             @minimo1 decimal(12,2), @maximo1 decimal(12,2)
 
-    declare c1 cursor for select stoc_producto, stoc_deposito, stoc_cantidad, stoc_punto_reposicion, stoc_stock_maximo
+    declare miCursor cursor for select stoc_producto, stoc_deposito, stoc_cantidad, stoc_punto_reposicion, stoc_stock_maximo
                           from inserted
 
-    open c1
-    fetch next from c1 into @producto1, @deposito1, @cantidad1, @minimo1, @maximo1
+    open miCursor
+    fetch next from miCursor into @producto1, @deposito1, @cantidad1, @minimo1, @maximo1
     while @@FETCH_STATUS = 0
     begin
         if(@cantidad1 >= @minimo1 and @cantidad1 <= @maximo1)
@@ -75,10 +75,10 @@ as begin
             else
                 PRINT 'NO SE ALTERO EL STOCK: YA HA ALCANZADO EL MAXIMO'
         end
-        fetch next from c1 into @producto1, @deposito1, @cantidad1, @minimo1, @maximo1
+        fetch next from miCursor into @producto1, @deposito1, @cantidad1, @minimo1, @maximo1
     end
-    close c1
-    deallocate c1
+    close miCursor
+    deallocate miCursor
 
 end
 
@@ -330,6 +330,39 @@ La tabla debe contener: mes,año,cantidad de facturas emitidas, monto total de v
 cliente q mas compro para ese mes y año.
 */
 
+create trigger facturacion_por_mes on Factura instead of insert
+as begin
+    
+   declare @fecha char(smalldatetime), @total char(12,2), @cliente char(6)
+
+    declare miCursor cursor
+    for select fact_fecha,fact_total,fact_cliente
+       from inserted i
+
+    open miCursor
+    fetch next from miCursor into @fecha, @total, @cliente
+
+    while @@FETCH_STATUS = 0
+    begin
+
+      pk = buscar_registro(@fecha)
+
+      if(pk is null)
+      begin
+        insertar_registro()
+      end
+      else
+      begin
+       actualizar_registro(pk)
+      end
+
+    fetch next from miCursor into @fecha, @total, @cliente
+
+    end
+
+    deallocate miCursor
+    close miCursor
+end
 
 
 /*
@@ -399,8 +432,6 @@ si esa factura tiene productos que podrian venderse como composicion o 0 (cero) 
 Ejemplo: Si tenemos una composicion COMOBO1 (COMPOSICION.comp_composicion) y este esta compuesto por 1 gaseosa y 2 Hamburguesas (
 COMPOSICION.comp_producto), una factura que vendio 4 hamburguesas, 1 gaseosa y 2 papas, se debera retornar 1.
 */
-
-
 create function dbo.fn_se_puede_vender_como_coposicion(@tipo char(1), @sucursal char(4), @numero char(8))
 returns bit
 as begin
@@ -418,7 +449,7 @@ declare @tiene_compocicion bit
                   item_tipo = @tipo
             group by C1.comp_producto
             having COUNT(*) = (select COUNT(*) from Composicion as C2 where C2.comp_producto= C1.comp_producto)
-              )    
+            )    
     begin
          set @tiene_compocicion = 1
     end

@@ -165,7 +165,7 @@ end
 
 go
 
-
+-- la funcion devuelve un 1 si lo tiene a cargo o un cero si no lo tiene
 create function loTieneACargo(@jefe_supremo numeric(6,0), @cod_empleado numeric(6,0))
 returns bit
 as begin
@@ -391,3 +391,40 @@ group by c1.clie_codigo, c1.clie_razon_social
 
 
 END
+
+/*
+ultimo recuperatorio de lacquaniti
+Implementar el/los objetos necesarios para que dada una factura se retorne un entero que indique 1 (uno)
+si esa factura tiene productos que podrian venderse como composicion o 0 (cero) en caso contrario.
+Ejemplo: Si tenemos una composicion COMOBO1 (COMPOSICION.comp_composicion) y este esta compuesto por 1 gaseosa y 2 Hamburguesas (
+COMPOSICION.comp_producto), una factura que vendio 4 hamburguesas, 1 gaseosa y 2 papas, se debera retornar 1.
+*/
+
+
+create function dbo.fn_se_puede_vender_como_coposicion(@tipo char(1), @sucursal char(4), @numero char(8))
+returns bit
+as begin
+declare @tiene_compocicion bit
+
+   set @tiene_compocicion = 0;
+
+   if exists(
+            select comp_producto 
+            from Item_Factura 
+            inner join Composicion C1 on (item_producto = C1.comp_componente)
+            where item_cantidad >= C1.comp_cantidad and
+                  item_sucursal = @sucursal and
+                  item_numero = @numero and
+                  item_tipo = @tipo
+            group by C1.comp_producto
+            having COUNT(*) = (select COUNT(*) from Composicion as C2 where C2.comp_producto= C1.comp_producto)
+              )    
+    begin
+         set @tiene_compocicion = 1
+    end
+
+return @tiene_compocicion;
+
+end
+
+

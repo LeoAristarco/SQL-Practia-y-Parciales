@@ -242,6 +242,8 @@ as begin
 
         WHILE(@@FETCH_STATUS = 0)
         begin
+         /* ACA HAY QUE UPDETEAR TODOS LOS CAMPOS (MENOS EL CAMPO "empl_comision")                                                     
+*/                                                                   
                 set @cantDepocitosAcargo = (select Count(*) from dbo.DEPOSITO  where depo_encargado=@empl_codigo)
 
                 if ( ( (@comisionNueva-@comisionVieja) * 100 / @comisionVieja) > 5)
